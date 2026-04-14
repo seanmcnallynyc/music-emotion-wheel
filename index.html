@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Emotion Wheel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0e0e10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .app {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    padding: 40px;
+  }
+
+  /* WHEEL */
+  #wheel-wrap {
+    position: relative;
+    width: 600px;
+    height: 600px;
+    flex-shrink: 0;
+  }
+
+  #wheel-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* PRIMARY EMOTION GROUPS */
+  .emotion-group {
+    cursor: pointer;
+    transform-origin: 300px 300px;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .emotion-group .inner-arc {
+    transition: filter 0.15s ease;
+  }
+
+  .emotion-group .adj-arc {
+    transition: opacity 0.15s ease;
+    opacity: 0.72;
+  }
+
+  .emotion-group:hover .inner-arc,
+  .emotion-group.active .inner-arc {
+    filter: brightness(1.15);
+  }
+
+  .emotion-group:hover .adj-arc,
+  .emotion-group.active .adj-arc {
+    opacity: 1;
+  }
+
+  .emotion-group.active .inner-arc {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.3));
+  }
+
+  .emotion-group.active {
+    transform: scale(1.05);
+  }
+
+  /* SECONDARY EMOTION GROUPS */
+  .secondary-group {
+    cursor: pointer;
+    transform-origin: 300px 300px;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .secondary-group .sec-arc {
+    transition: filter 0.15s ease, opacity 0.15s ease;
+    opacity: 0.72;
+  }
+
+  .secondary-group:hover .sec-arc,
+  .secondary-group.active .sec-arc {
+    opacity: 1;
+    filter: brightness(1.15);
+  }
+
+  .secondary-group.active .sec-arc {
+    filter: brightness(1.2) drop-shadow(0 0 6px rgba(255,255,255,0.25));
+  }
+
+  .secondary-group.active {
+    transform: scale(1.05);
+  }
+
+  /* EMOTION LABELS on wheel */
+  .emotion-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    fill: white;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+  }
+
+  .secondary-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    fill: rgba(255,255,255,0.85);
+    pointer-events: none;
+    letter-spacing: 0.02em;
+  }
+
+  .tertiary-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 400;
+    fill: rgba(255,255,255,0.32);
+    pointer-events: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* CENTER CIRCLE */
+  #center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 152px;
+    height: 152px;
+    border-radius: 50%;
+    background: #0e0e10;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  #center-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 6px;
+    min-height: 14px;
+    transition: opacity 0.2s;
+  }
+
+  #center-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: white;
+    margin-bottom: 2px;
+    min-height: 28px;
+    line-height: 1.2;
+    transition: opacity 0.2s;
+  }
+
+  #center-type {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    min-height: 12px;
+    transition: opacity 0.2s;
+  }
+
+  /* SIDE PANEL */
+  .side-panel {
+    width: 240px;
+    flex-shrink: 0;
+  }
+
+  .side-panel h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: white;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  .side-panel .subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 32px;
+    letter-spacing: 0.03em;
+  }
+
+  .adj-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 200px;
+  }
+
+  .adj-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .adj-item.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .adj-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .adj-word {
+    font-size: 18px;
+    font-family: 'DM Serif Display', serif;
+    color: white;
+    font-style: italic;
+  }
+
+  .placeholder-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.2);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  /* Legend */
+  .legend {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .legend-swatch {
+    width: 22px;
+    height: 6px;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div id="wheel-wrap">
+    <svg id="wheel-svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="center">
+      <div id="center-label">I feel...</div>
+      <div id="center-name"></div>
+      <div id="center-type"></div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <h2>Music<br>Emotion<br>Wheel</h2>
+    <p class="subtitle">tap an emotion to explore its sonic qualities</p>
+    <div class="adj-list" id="adj-list">
+      <p class="placeholder-text" id="placeholder">Select an emotion<br>to reveal its musical<br>adjectives.</p>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: rgba(255,255,255,0.4)"></div>
+        primary
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.2)"></div>
+        blended
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const cx = 300, cy = 300;
+const R0 = 80;   // inner hole
+const R1 = 145;  // primary ring outer edge
+const R2 = 205;  // secondary ring outer edge
+const R3 = 272;  // adjective ring outer edge
+const GAP = 1.2; // gap between segments in degrees
+
+const primaryEmotions = [
+  {
+    name: 'Happy',
+    color: '#E8B84B',
+    adjColor: '#F2CE70',
+    adjectives: ['bright', 'uplifting', 'buoyant', 'radiant', 'soaring'],
+    startAngle: -90
+  },
+  {
+    name: 'Trust',
+    color: '#5A9E52',
+    adjColor: '#7BBF73',
+    adjectives: ['warm', 'steady', 'grounded', 'intimate', 'reassuring'],
+    startAngle: -45
+  },
+  {
+    name: 'Fear',
+    color: '#3A82C0',
+    adjColor: '#5B9ED4',
+    adjectives: ['tense', 'unsettling', 'hollow', 'lurking', 'suspended'],
+    startAngle: 0
+  },
+  {
+    name: 'Surprise',
+    color: '#2AAFAF',
+    adjColor: '#50CECE',
+    adjectives: ['sudden', 'electric', 'jarring', 'sharp', 'wide-eyed'],
+    startAngle: 45
+  },
+  {
+    name: 'Sad',
+    color: '#5858BB',
+    adjColor: '#7A7AD0',
+    adjectives: ['aching', 'somber', 'heavy', 'tender', 'sparse'],
+    startAngle: 90
+  },
+  {
+    name: 'Disgust',
+    color: '#8844AA',
+    adjColor: '#A866CC',
+    adjectives: ['grating', 'dissonant', 'murky', 'harsh', 'guttural'],
+    startAngle: 135
+  },
+  {
+    name: 'Angry',
+    color: '#D63838',
+    adjColor: '#E86060',
+    adjectives: ['driving', 'raw', 'abrasive', 'relentless', 'fierce'],
+    startAngle: 180
+  },
+  {
+    name: 'Anticipation',
+    color: '#D47830',
+    adjColor: '#E89F58',
+    adjectives: ['building', 'pulsing', 'restless', 'urgent', 'propulsive'],
+    startAngle: 225
+  }
+];
+
+// Secondary (blended) emotions — each centered at the seam between two primaries,
+// so startAngle = primaryBoundary - 22.5° (i.e. offset 22.5° from primary starts)
+const secondaryEmotions = [
+  {
+    name: 'Love',
+    blend: 'Happy + Trust',
+    color: '#A1AB4F',
+    adjColor: '#BDC870',
+    adjectives: ['tender', 'intimate', 'swelling', 'glowing', 'entwined'],
+    startAngle: -67.5
+  },
+  {
+    name: 'Submission',
+    blend: 'Trust + Fear',
+    color: '#4A9089',
+    adjColor: '#6AADA8',
+    adjectives: ['reverent', 'hushed', 'devotional', 'yielding', 'kneeling'],
+    startAngle: -22.5
+  },
+  {
+    name: 'Awe',
+    blend: 'Fear + Surprise',
+    color: '#3299B8',
+    adjColor: '#52B2CC',
+    adjectives: ['vast', 'trembling', 'infinite', 'otherworldly', 'breathtaking'],
+    startAngle: 22.5
+  },
+  {
+    name: 'Disapproval',
+    blend: 'Surprise + Sad',
+    color: '#4184B5',
+    adjColor: '#609FCC',
+    adjectives: ['fractured', 'hollow', 'bitter', 'resigned', 'deflated'],
+    startAngle: 67.5
+  },
+  {
+    name: 'Remorse',
+    blend: 'Sad + Disgust',
+    color: '#704EB3',
+    adjColor: '#8F70CC',
+    adjectives: ['mournful', 'languid', 'regretful', 'subdued', 'aching'],
+    startAngle: 112.5
+  },
+  {
+    name: 'Contempt',
+    blend: 'Disgust + Angry',
+    color: '#AF3E71',
+    adjColor: '#C85E90',
+    adjectives: ['cold', 'cutting', 'dismissive', 'brittle', 'sneering'],
+    startAngle: 157.5
+  },
+  {
+    name: 'Aggressiveness',
+    blend: 'Angry + Anticipation',
+    color: '#D55834',
+    adjColor: '#E0764F',
+    adjectives: ['charging', 'volatile', 'surging', 'intense', 'relentless'],
+    startAngle: 202.5
+  },
+  {
+    name: 'Optimism',
+    blend: 'Anticipation + Happy',
+    color: '#DE983D',
+    adjColor: '#EBB35A',
+    adjectives: ['rising', 'hopeful', 'spiraling', 'expectant', 'luminous'],
+    startAngle: 247.5
+  }
+];
+
+const SLICE = 45;
+
+function rad(d) { return d * Math.PI / 180; }
+
+function annularArc(r1, r2, startDeg, endDeg, gap = 0) {
+  const s = rad(startDeg + gap / 2);
+  const e = rad(endDeg - gap / 2);
+  const x1 = cx + r2 * Math.cos(s), y1 = cy + r2 * Math.sin(s);
+  const x2 = cx + r2 * Math.cos(e), y2 = cy + r2 * Math.sin(e);
+  const x3 = cx + r1 * Math.cos(e), y3 = cy + r1 * Math.sin(e);
+  const x4 = cx + r1 * Math.cos(s), y4 = cy + r1 * Math.sin(s);
+  const large = (endDeg - startDeg - gap) > 180 ? 1 : 0;
+  return `M${x1},${y1} A${r2},${r2},0,${large},1,${x2},${y2} L${x3},${y3} A${r1},${r1},0,${large},0,${x4},${y4} Z`;
+}
+
+function labelPosition(r, angleDeg) {
+  const a = rad(angleDeg);
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+}
+
+function textRotation(mid) {
+  const base = mid + 90;
+  return (mid > 0 && mid < 180) ? base + 180 : base;
+}
+
+const svg = document.getElementById('wheel-svg');
+
+// Track all interactive groups for mutual exclusion
+let allGroups = [];
+
+function deactivateAll() {
+  allGroups.forEach(({ el }) => el.classList.remove('active'));
+}
+
+function showAdjectives(em, isSecondary) {
+  const nameEl = document.getElementById('center-name');
+  const labelEl = document.getElementById('center-label');
+  const typeEl = document.getElementById('center-type');
+  const adjList = document.getElementById('adj-list');
+
+  nameEl.textContent = em.name;
+  labelEl.textContent = 'I feel...';
+  typeEl.textContent = isSecondary ? em.blend : 'primary';
+
+  adjList.innerHTML = '';
+  em.adjectives.forEach((adj, i) => {
+    const item = document.createElement('div');
+    item.className = 'adj-item';
+    item.innerHTML = `
+      <div class="adj-dot" style="background:${em.adjColor}"></div>
+      <span class="adj-word">${adj}</span>
+    `;
+    adjList.appendChild(item);
+    setTimeout(() => item.classList.add('visible'), 40 + i * 55);
+  });
+}
+
+function resetPanel() {
+  document.getElementById('center-name').textContent = '';
+  document.getElementById('center-label').textContent = 'I feel...';
+  document.getElementById('center-type').textContent = '';
+  document.getElementById('adj-list').innerHTML =
+    '<p class="placeholder-text" id="placeholder">Select an emotion<br>to reveal its musical<br>adjectives.</p>';
+}
+
+// ── Primary emotion groups ─────────────────────────────────────────────────
+primaryEmotions.forEach((em) => {
+  const start = em.startAngle;
+  const end = start + SLICE;
+  const mid = start + SLICE / 2;
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.classList.add('emotion-group');
+  g.setAttribute('data-name', em.name);
+
+  // Inner arc
+  const innerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  innerPath.setAttribute('d', annularArc(R0, R1, start, end, GAP));
+  innerPath.setAttribute('fill', em.color);
+  innerPath.classList.add('inner-arc');
+  g.appendChild(innerPath);
+
+  // Adjective arcs (outer ring, 5 subdivisions)
+  const adjSlice = SLICE / 5;
+  em.adjectives.forEach((adj, j) => {
+    const aStart = start + j * adjSlice;
+    const aEnd = aStart + adjSlice;
+    const ap = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    ap.setAttribute('d', annularArc(R2, R3, aStart, aEnd, GAP));
+    ap.setAttribute('fill', em.adjColor);
+    ap.setAttribute('opacity', 0.65 + j * 0.07);
+    ap.classList.add('adj-arc');
+    g.appendChild(ap);
+  });
+
+  // Primary label in inner ring
+  const labelR = (R0 + R1) / 2;
+  const lpos = labelPosition(labelR, mid);
+  const finalRot = textRotation(mid);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.classList.add('emotion-label');
+  text.setAttribute('x', lpos.x);
+  text.setAttribute('y', lpos.y);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'middle');
+  text.setAttribute('transform', `rotate(${finalRot},${lpos.x},${lpos.y})`);
+  text.textContent = em.name;
+  g.appendChild(text);
+
+  svg.appendChild(g);
+
+  allGroups.push({ el: g });
+
+  g.addEventListener('click', () => {
+    const isActive = g.classList.contains('active');
+    deactivateAll();
+    if (isActive) {
+      resetPanel();
+    } else {
+      g.classList.add('active');
+      showAdjectives(em, false);
+    }
+  });
+});
+
+// ── Secondary emotion groups ───────────────────────────────────────────────
+secondaryEmotions.forEach((em) => {
+  const start = em.startAngle;
+  const end = start + SLICE;
+  const mid = start + SLICE / 2;
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.classList.add('secondary-group');
+  g.setAttribute('data-name', em.name);
+
+  // Secondary arc (middle ring only)
+  const secPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  secPath.setAttribute('d', annularArc(R1, R2, start, end, GAP));
+  secPath.setAttribute('fill', em.color);
+  secPath.classList.add('sec-arc');
+  g.appendChild(secPath);
+
+  // Secondary label in middle ring
+  const labelR = (R1 + R2) / 2;
+  const lpos = labelPosition(labelR, mid);
+  const finalRot = textRotation(mid);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.classList.add('secondary-label');
+  text.setAttribute('x', lpos.x);
+  text.setAttribute('y', lpos.y);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'middle');
+  text.setAttribute('transform', `rotate(${finalRot},${lpos.x},${lpos.y})`);
+  text.textContent = em.name;
+  g.appendChild(text);
+
+  svg.appendChild(g);
+
+  allGroups.push({ el: g });
+
+  g.addEventListener('click', () => {
+    const isActive = g.classList.contains('active');
+    deactivateAll();
+    if (isActive) {
+      resetPanel();
+    } else {
+      g.classList.add('active');
+      showAdjectives(em, true);
+    }
+  });
+});
+
+// ── Tertiary (outermost) emotion labels ───────────────────────────────────
+// Plutchik's mild/low-intensity emotions — one per primary spoke
+const tertiaryEmotions = [
+  { name: 'Serenity',     mid: -67.5 }, // Happy
+  { name: 'Acceptance',   mid: -22.5 }, // Trust
+  { name: 'Apprehension', mid:  22.5 }, // Fear
+  { name: 'Distraction',  mid:  67.5 }, // Surprise
+  { name: 'Pensiveness',  mid: 112.5 }, // Sad
+  { name: 'Boredom',      mid: 157.5 }, // Disgust
+  { name: 'Annoyance',    mid: 202.5 }, // Angry
+  { name: 'Interest',     mid: 247.5 }, // Anticipation
+];
+
+const R_TERTIARY = 292;
+
+tertiaryEmotions.forEach(({ name, mid }) => {
+  const pos = labelPosition(R_TERTIARY, mid);
+  const rot = textRotation(mid);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.classList.add('tertiary-label');
+  text.setAttribute('x', pos.x);
+  text.setAttribute('y', pos.y);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'middle');
+  text.setAttribute('transform', `rotate(${rot},${pos.x},${pos.y})`);
+  text.textContent = name;
+  svg.appendChild(text);
+});
+
+// Center overlay circle (drawn last so it sits on top)
+const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+centerCircle.setAttribute('cx', cx);
+centerCircle.setAttribute('cy', cy);
+centerCircle.setAttribute('r', R0 - 2);
+centerCircle.setAttribute('fill', '#0e0e10');
+svg.appendChild(centerCircle);
+</script>
+</body>
+</html>
